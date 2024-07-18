@@ -1,5 +1,4 @@
 open Tiger_ml
-open Syntax
 open Utils
 
 let read_file file =
@@ -18,5 +17,4 @@ let source = read_file file
 let program = parse_from_string source
 let ty = Semant.trans_prog program
 let _ = print_endline (Types.string_of_ty ty)
-
 

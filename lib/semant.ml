@@ -20,10 +20,10 @@ let unify_ty t1 t2 msg =
   are normalised (i.e. applied to the actual_ty function).
 *)
 
-let rec trans_exp (venv : venv) (tenv : tenv) = 
+let rec trans_exp (venv : venv) (tenv : tenv) (lvl : Translate.level) = 
   let rec tr_exp (e : exp) : expty = 
     match e with
-    | EVar v -> trans_var venv tenv v
+    | EVar v -> trans_var venv tenv lvl v
     | ENil -> { exp = (); ty = TNil }
     | EInt _ -> { exp = (); ty = TInt }
     | EString _ -> { exp = (); ty = TString }
@@ -31,7 +31,7 @@ let rec trans_exp (venv : venv) (tenv : tenv) =
         let formals, result = 
           match S.lookup venv func with
           | Some(Env.VarEntry _) -> failwith "the function name refers to a variable"
-          | Some(Env.FunEntry { formals; result }) -> formals, result
+          | Some(Env.FunEntry { formals; result; _ }) -> formals, result
           | None -> failwith "unbound function name"
         in
         let args = List.map (fun e -> tr_exp e) args in
@@ -96,7 +96,7 @@ let rec trans_exp (venv : venv) (tenv : tenv) =
             tr_exp (ESeq es)
         end
     | EAssign { var; e } ->
-        let { exp = _; ty = t1 } = trans_var venv tenv var in
+        let { exp = _; ty = t1 } = trans_var venv tenv lvl var in
         let { exp = _; ty = t2 } = tr_exp e in
         unify_ty t1 t2 "type mismatch at the assignment operation";
         { exp = (); ty = TUnit }
@@ -118,19 +118,20 @@ let rec trans_exp (venv : venv) (tenv : tenv) =
         unify_ty t1 TInt "the test in a while statement should be an integer";
         unify_ty t2 TUnit "the body in a while statement should return unit";
         { exp = (); ty = TUnit }
-    | EFor { var; lo; hi; body; _ } ->
+    | EFor { var; lo; hi; body; escape } ->
         let { exp = _; ty = t1 } = tr_exp lo in
         let { exp = _; ty = t2 } = tr_exp hi in
         unify_ty t1 TInt "the lowerbound of a for loop should be an integer";
         unify_ty t2 TInt "the upperbound of a for loop should be an integer";
-        let venv' = S.insert venv var (Env.VarEntry { ty = TInt }) in
-        let { exp = _; ty = t3 } = trans_exp venv' tenv body in
+        let access = Translate.alloc_local lvl !escape in
+        let venv' = S.insert venv var (Env.VarEntry { ty = TInt; access = access }) in
+        let { exp = _; ty = t3 } = trans_exp venv' tenv lvl body in
         unify_ty t3 TUnit "the body of a for loop should return unit";
         { exp = (); ty = TUnit }
     | EBreak -> { exp = (); ty = TUnit }
     | ELet { decls; body } ->
-        let (venv', tenv') = trans_decls venv tenv decls in
-        trans_exp venv' tenv' body
+        let (venv', tenv') = trans_decls venv tenv lvl decls in
+        trans_exp venv' tenv' lvl body
     | EArray { typ; size; init } ->
         begin match S.lookup tenv typ with
         | Some (TArray(t1, _) as t) ->
@@ -145,16 +146,16 @@ let rec trans_exp (venv : venv) (tenv : tenv) =
   in
   tr_exp
 
-and trans_var (venv : venv) (tenv : tenv) (var : var) : expty = 
+and trans_var (venv : venv) (tenv : tenv) (lvl : Translate.level) (var : var)  : expty = 
   match var with
   | VSimple v ->
       begin match S.lookup venv v with
-      | Some (VarEntry { ty = t }) -> { exp = (); ty = t }
+      | Some (VarEntry { ty = t; _ }) -> { exp = (); ty = t }
       | Some (FunEntry _) -> failwith "the variable name refers to a function"
       | None -> failwith "unbound variable"
       end
   | VField(r, f) ->
-      let { exp = (); ty = t } = trans_var venv tenv r in
+      let { exp = (); ty = t } = trans_var venv tenv lvl r in
       begin match t with
       | TRecord(fields, _) -> 
           begin match List.assoc_opt f fields with
@@ -164,24 +165,24 @@ and trans_var (venv : venv) (tenv : tenv) (var : var) : expty =
       | _ -> failwith "extracting a field from a non-record"
       end
   | VSubscript(a, s) ->
-      let { exp = (); ty = t1 } = trans_var venv tenv a in
-      let { exp = (); ty = t2 } = trans_exp venv tenv s in
+      let { exp = (); ty = t1 } = trans_var venv tenv lvl a in
+      let { exp = (); ty = t2 } = trans_exp venv tenv lvl s in
       match t1 with
       | TArray(t3, _) ->
           unify_ty t2 TInt "the subscript should be an integer";
           { exp = (); ty = actual_ty t3 }
       | _ -> failwith "taking subscript of a non-array"
 
-and trans_decls (venv : venv) (tenv : tenv) (decls : decl list) : venv * tenv = 
+and trans_decls (venv : venv) (tenv : tenv) (lvl : Translate.level) (decls : decl list) : venv * tenv = 
   match decls with
   | [] -> venv, tenv
   | d :: ds ->
-      let (venv', tenv') = trans_dec venv tenv d in trans_decls venv' tenv' ds
+      let (venv', tenv') = trans_dec venv tenv lvl d in trans_decls venv' tenv' lvl ds
 
-and trans_dec (venv : venv) (tenv : tenv) (decl : decl) : venv * tenv =
+and trans_dec (venv : venv) (tenv : tenv) (lvl : Translate.level) (decl : decl) : venv * tenv =
   match decl with
-  | DVar { var; escape = _; annot; e } -> 
-      let { exp = (); ty = t1 } = trans_exp venv tenv e in
+  | DVar { var; escape; annot; e } -> 
+      let { exp = (); ty = t1 } = trans_exp venv tenv lvl e in
       begin match annot with
       | Some t2 ->
           begin match S.lookup tenv t2 with
@@ -190,13 +191,14 @@ and trans_dec (venv : venv) (tenv : tenv) (decl : decl) : venv * tenv =
           end
       | None -> ()
       end;
-      let venv' = S.insert venv var (Env.VarEntry { ty = t1 }) in
+      let access = Translate.alloc_local lvl !escape in
+      let venv' = S.insert venv var (Env.VarEntry { ty = t1; access = access }) in
       venv', tenv
   | DFunctions fns ->
       let formals_ty params = 
-        List.map (fun { typ = t; name = n; _ } ->
+        List.map (fun { typ = t; name = n; escape = e } ->
           match S.lookup tenv t with
-          | Some t -> n, t
+          | Some t -> n, t, !e
           | None -> failwith "unbound type variable in function parameter annotation"
         ) params
       in
@@ -211,18 +213,29 @@ and trans_dec (venv : venv) (tenv : tenv) (decl : decl) : venv * tenv =
       in
       let venv' = List.fold_left
         (fun acc { fname; params; result; _ } -> 
-          let ent = Env.FunEntry { formals = List.map snd (formals_ty params); result = result_ty result } in
+          let label = Temp.new_label () in
+          let new_level = Translate.new_level lvl label (List.map (fun p -> !(p.escape)) params) in
+          let ent = Env.FunEntry {
+            label = label;
+            level = new_level;
+            formals = List.map (fun (_, t, _) -> t) (formals_ty params);
+            result = result_ty result;
+          } in
           S.insert acc fname ent
         ) venv fns
       in
       let _ = List.iter
-        (fun { params; result; body; _ } ->
-          let venv'' = List.fold_left
-            (fun acc (n, t) ->
-              S.insert acc n (Env.VarEntry { ty = t })
-            ) venv' (formals_ty params) in
-          let { exp = (); ty = t } = trans_exp venv'' tenv body in
-          unify_ty t (result_ty result) "the return type of a function does not match an annotation"
+        (fun { fname; params; result; body; } ->
+          match S.lookup venv fname with
+          | Some (Env.FunEntry { level = fn_level; _ }) ->
+              let venv'' = List.fold_left
+                (fun acc (n, t, e) ->
+                  let access = Translate.alloc_local fn_level e in
+                  S.insert acc n (Env.VarEntry { ty = t; access = access })
+                ) venv' (formals_ty params) in
+              let { exp = (); ty = t } = trans_exp venv'' tenv fn_level body in
+              unify_ty t (result_ty result) "the return type of a function does not match an annotation"
+          | _ -> failwith "internal error"
         ) fns
       in
       venv', tenv
@@ -292,4 +305,4 @@ and trans_ty (tenv : tenv) (ty : typ) : ty =
       TArray(t, ref ())
 
 let trans_prog (p : exp) : ty = 
-  (trans_exp Env.base_venv Env.base_tenv p).ty
+  (trans_exp Env.base_venv Env.base_tenv Translate.outermost p).ty
