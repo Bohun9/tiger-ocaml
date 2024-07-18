@@ -32,8 +32,12 @@ let rec merge_decls (decls: decl list) : decl list =
 %%
 
 var
-  : ID                          { VSimple $1 }
-  | var DOT ID                  { VField($1, $3) }
+  : ID           { VSimple $1 }
+  | var_compound { $1 }
+
+var_compound
+  : var DOT ID                  { VField($1, $3) }
+  | ID L_BRACKET exp R_BRACKET  { VSubscript(VSimple $1, $3) }
   | var L_BRACKET exp R_BRACKET { VSubscript($1, $3) }
 
 exp
@@ -70,8 +74,8 @@ exp
 decl
   : FUNCTION ID L_PAREN seq(field_ty, COMMA) R_PAREN EQ exp          { DFunctions [{ fname = $2; params = $4; result = None; body = $7 }] }
   | FUNCTION ID L_PAREN seq(field_ty, COMMA) R_PAREN COLON ID EQ exp { DFunctions [{ fname = $2; params = $4; result = Some $7; body = $9 }] }
-  | VAR ID ASSIGN exp                                                { DVar { var = $2; escape = ref true; anot = None; e = $4 } }
-  | VAR ID COLON ID ASSIGN exp                                       { DVar { var = $2; escape = ref true; anot = Some $4; e = $6 } }
+  | VAR ID ASSIGN exp                                                { DVar { var = $2; escape = ref true; annot = None; e = $4 } }
+  | VAR ID COLON ID ASSIGN exp                                       { DVar { var = $2; escape = ref true; annot = Some $4; e = $6 } }
   | TYPE ID EQ ty                                                    { DTypes [$2, $4] }
 
 ty

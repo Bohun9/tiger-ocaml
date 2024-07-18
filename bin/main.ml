@@ -16,6 +16,7 @@ let read_file file =
 let file = Sys.argv.(1)
 let source = read_file file
 let program = parse_from_string source
-let _ = print_endline (string_of_exp program)
+let ty = Semant.trans_prog program
+let _ = print_endline (Types.string_of_ty ty)
 
 

@@ -24,10 +24,10 @@ and exp =
 
 and decl =
   | DFunctions of fundecl list
-  | DVar of { var: symbol; escape: bool ref; anot: symbol option; e: exp }
-  | DTypes of (symbol * ty) list
+  | DVar of { var: symbol; escape: bool ref; annot: symbol option; e: exp }
+  | DTypes of (symbol * typ) list
 
-and ty =
+and typ =
   | TName of symbol
   | TRecord of field list
   | TArray of symbol
@@ -74,9 +74,9 @@ and string_of_exp = function
 
 and string_of_decl = function
   | DFunctions fundecls -> "DFunctions [" ^ String.concat "; " (List.map string_of_fundecl fundecls) ^ "]"
-  | DVar {var; escape; anot; e} -> 
+  | DVar {var; escape; annot; e} -> 
       "DVar { var = " ^ var ^ "; escape = " ^ string_of_bool !escape ^ 
-      "; anot = " ^ (match anot with Some a -> a | None -> "None") ^ "; e = " ^ string_of_exp e ^ " }"
+      "; anot = " ^ (match annot with Some a -> a | None -> "None") ^ "; e = " ^ string_of_exp e ^ " }"
   | DTypes types -> 
       "DTypes [" ^ String.concat "; " (List.map (fun (s, t) -> "(" ^ s ^ ", " ^ string_of_ty t ^ ")") types) ^ "]"
 
