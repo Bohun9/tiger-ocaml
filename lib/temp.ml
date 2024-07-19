@@ -1,5 +1,10 @@
-type temp = Temp of int
-type label = Label of string
+type temp =
+  Temp of int
+  [@@deriving show]
+
+type label =
+  Label of string
+  [@@deriving show]
 
 let new_temp = 
   let r = ref 0 in

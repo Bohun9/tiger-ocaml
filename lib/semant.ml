@@ -15,23 +15,21 @@ let unify_ty t1 t2 msg =
   else
     failwith msg
 
-(*
-  Types returned from functions trans_* and stored in the tenv and venv environments
-  are normalised (i.e. applied to the actual_ty function).
-*)
+(* The types returned from functions trans* and stored in the tenv and venv environments
+   are normalised (i.e. applied to the actual_ty function). *)
 
-let rec trans_exp (venv : venv) (tenv : tenv) (lvl : Translate.level) = 
+let rec trans_exp (venv : venv) (tenv : tenv) (lvl : Translate.level) (ldone : Temp.label option) = 
   let rec tr_exp (e : exp) : expty = 
     match e with
-    | EVar v -> trans_var venv tenv lvl v
-    | ENil -> { exp = (); ty = TNil }
-    | EInt _ -> { exp = (); ty = TInt }
-    | EString _ -> { exp = (); ty = TString }
+    | EVar v -> trans_var venv tenv lvl ldone v
+    | ENil -> { exp = Translate.nil_exp; ty = TNil }
+    | EInt i -> { exp = Translate.int_exp i; ty = TInt }
+    | EString s -> { exp = Translate.string_exp s; ty = TString }
     | ECall { func; args } ->
-        let formals, result = 
+        let formals, result, fn_lvl, label = 
           match S.lookup venv func with
           | Some(Env.VarEntry _) -> failwith "the function name refers to a variable"
-          | Some(Env.FunEntry { formals; result; _ }) -> formals, result
+          | Some(Env.FunEntry { formals; result; level; label }) -> formals, result, level, label
           | None -> failwith "unbound function name"
         in
         let args = List.map (fun e -> tr_exp e) args in
@@ -40,13 +38,13 @@ let rec trans_exp (venv : venv) (tenv : tenv) (lvl : Translate.level) =
           | [], [] -> ()
           | (_::_), [] -> failwith "there are more formals than arguments"
           | [], (_::_) -> failwith "there are more formals than arguments"
-          | (x::xs),(y::ys) -> unify_ty x y "the type of an argument does not match the type of a formal"; check xs ys
+          | (x::xs), (y::ys) -> unify_ty x y "the type of an argument does not match the type of a formal"; check xs ys
         in
-        check formals (List.map (fun { exp = _; ty = ty } -> ty) args);
-        { exp = (); ty = result }
+        check formals (List.map (fun x -> x.ty) args);
+        { exp = Translate.call_exp label fn_lvl lvl (List.map (fun x -> x.exp) args); ty = result }
     | EOp { e1; op; e2 } -> 
-        let { exp = _; ty = t1 } = tr_exp e1 in
-        let { exp = _; ty = t2 } = tr_exp e2 in
+        let { exp = exp1; ty = t1 } = tr_exp e1 in
+        let { exp = exp2; ty = t2 } = tr_exp e2 in
         let ty =
           begin match op with
           | _ when List.mem op [OpAdd; OpSub; OpMul; OpDiv] ->
@@ -62,12 +60,12 @@ let rec trans_exp (venv : venv) (tenv : tenv) (lvl : Translate.level) =
               end
           end
         in
-        { exp = (); ty = ty }
+        { exp = Translate.op_exp exp1 op exp2; ty = ty }
     | ERecord { typ; fields } -> 
         begin match S.lookup tenv typ with
         | Some (TRecord(fields_ty1, _) as t) ->
           let fields = List.map (fun (n, e) -> n, tr_exp e) fields in
-          let fields_ty2 = List.map (fun (n, { exp = _; ty = t }) -> n, t) fields in
+          let fields_ty2 = List.map (fun (n, x) -> n, x.ty) fields in
           let rec check xs ys = 
             begin match xs, ys with
             | [], [] -> ()
@@ -82,107 +80,129 @@ let rec trans_exp (venv : venv) (tenv : tenv) (lvl : Translate.level) =
             end
           in
           check fields_ty1 fields_ty2; 
-          { exp = (); ty = t }
+          { exp = Translate.record_exp (List.map (fun (_, x) -> x.exp) fields); ty = t }
         | Some _ -> failwith "the type variable does not correspond to a record"
         | None -> failwith "unbound type variable"
         end
     | ESeq es ->
         begin match es with
-        | [] -> { exp = (); ty = TUnit }
+        | [] -> { exp = Translate.nop; ty = TUnit }
         | [e] -> tr_exp e
         | e :: es ->
-            let { exp = _; ty = t } = tr_exp e in
-            unify_ty t TUnit "the non-last expression in an expression sequence should return unit";
-            tr_exp (ESeq es)
+            let { exp = exp1; ty = t1 } = tr_exp e in
+            unify_ty t1 TUnit "the non-last expression in an expression sequence should return unit";
+            let { exp = exp2; ty = t2 } = tr_exp (ESeq es) in
+            { exp = Translate.seq_exp exp1 exp2; ty = t2 }
         end
     | EAssign { var; e } ->
-        let { exp = _; ty = t1 } = trans_var venv tenv lvl var in
-        let { exp = _; ty = t2 } = tr_exp e in
+        let { exp = exp1; ty = t1 } = trans_var venv tenv lvl ldone var in
+        let { exp = exp2; ty = t2 } = tr_exp e in
         unify_ty t1 t2 "type mismatch at the assignment operation";
-        { exp = (); ty = TUnit }
+        { exp = Translate.assign_exp exp1 exp2; ty = TUnit }
     | EIf { test; then'; else' } ->
-        let { exp = _; ty = t1 } = tr_exp test in
-        let { exp = _; ty = t2 } = tr_exp then' in
-        let t3 = 
+        let { exp = exp1; ty = t1 } = tr_exp test in
+        let { exp = exp2; ty = t2 } = tr_exp then' in
+        let exp3, t3 = 
           begin match else' with
-          | Some e -> let { exp = _; ty = t3 } = tr_exp e in t3
-          | None -> TUnit
+          | Some e -> let { exp = exp3; ty = t3 } = tr_exp e in exp3, t3
+          | None -> Translate.nop, TUnit
           end
         in
         unify_ty t1 TInt "test expression in the if statement should be an integer";
         unify_ty t2 t3 "if branches should have compatible types"; 
-        { exp = (); ty = TUnit }
+        { exp = Translate.if_exp exp1 exp2 exp3; ty = TUnit }
     | EWhile { test; body } ->
-        let { exp = _; ty = t1 } = tr_exp test in
-        let { exp = _; ty = t2 } = tr_exp body in
+        let test_lab = Temp.new_label () in
+        let { exp = exp1; ty = t1 } = tr_exp test in
+        let { exp = exp2; ty = t2 } = trans_exp venv tenv lvl (Some test_lab) body in
         unify_ty t1 TInt "the test in a while statement should be an integer";
         unify_ty t2 TUnit "the body in a while statement should return unit";
-        { exp = (); ty = TUnit }
+        { exp = Translate.while_exp exp1 exp2 test_lab; ty = TUnit }
     | EFor { var; lo; hi; body; escape } ->
-        let { exp = _; ty = t1 } = tr_exp lo in
-        let { exp = _; ty = t2 } = tr_exp hi in
-        unify_ty t1 TInt "the lowerbound of a for loop should be an integer";
-        unify_ty t2 TInt "the upperbound of a for loop should be an integer";
-        let access = Translate.alloc_local lvl !escape in
-        let venv' = S.insert venv var (Env.VarEntry { ty = TInt; access = access }) in
-        let { exp = _; ty = t3 } = trans_exp venv' tenv lvl body in
-        unify_ty t3 TUnit "the body of a for loop should return unit";
-        { exp = (); ty = TUnit }
-    | EBreak -> { exp = (); ty = TUnit }
+        tr_exp (
+          ELet {
+            decls = [
+              DVar { var = var; escape = escape; annot = None; e = lo };
+              DVar { var = "_for_hi"; escape = ref true; annot = None; e = hi };
+            ]; 
+            body = EWhile {
+              test = EOp { e1 = EVar(VSimple var); op = OpLe; e2 = (EVar(VSimple "_for_hi")) };
+              body = ESeq([
+                body;
+                EAssign { var = VSimple var; e = EOp { e1 = EVar(VSimple var); op = OpAdd; e2 = EInt 1 }};
+              ])
+            }
+          }
+        )
+    | EBreak ->
+        begin match ldone with
+        | Some d -> { exp = Translate.break_exp d; ty = TUnit }
+        | None -> failwith "the break is not inside a loop"
+        end
     | ELet { decls; body } ->
-        let (venv', tenv') = trans_decls venv tenv lvl decls in
-        trans_exp venv' tenv' lvl body
+        let (venv', tenv', es) = trans_decls venv tenv lvl ldone decls in
+        let { exp = exp; ty = ty } = trans_exp venv' tenv' lvl ldone body in
+        { exp = Translate.let_exp es exp; ty = ty }
     | EArray { typ; size; init } ->
         begin match S.lookup tenv typ with
         | Some (TArray(t1, _) as t) ->
-            let { exp = _; ty = t2 } = tr_exp size in
-            let { exp = _; ty = t3 } = tr_exp init in
+            let { exp = exp1; ty = t2 } = tr_exp size in
+            let { exp = exp2; ty = t3 } = tr_exp init in
             unify_ty t2 TInt "the size of an array should be an integer";
             unify_ty t1 t3 "the initinal value for an array has a wrong type";
-            { exp = (); ty = t }
+            { exp = Translate.array_exp exp1 exp2; ty = t }
         | Some _ -> failwith "the type variable does not correspond to an array"
         | None -> failwith "unbound type variable"
         end
   in
   tr_exp
 
-and trans_var (venv : venv) (tenv : tenv) (lvl : Translate.level) (var : var)  : expty = 
+and trans_var (venv : venv) (tenv : tenv) (lvl : Translate.level) (ldone : Temp.label option) (var : var)  : expty = 
   match var with
   | VSimple v ->
       begin match S.lookup venv v with
-      | Some (VarEntry { ty = t; _ }) -> { exp = (); ty = t }
+      | Some (VarEntry { ty = t; access = access }) -> { exp = Translate.simple_var access lvl; ty = t }
       | Some (FunEntry _) -> failwith "the variable name refers to a function"
       | None -> failwith "unbound variable"
       end
   | VField(r, f) ->
-      let { exp = (); ty = t } = trans_var venv tenv lvl r in
+      let { exp = exp; ty = t } = trans_var venv tenv lvl ldone r in
       begin match t with
       | TRecord(fields, _) -> 
           begin match List.assoc_opt f fields with
-          | Some t -> { exp = (); ty = actual_ty t }
+          | Some t ->
+              let i = 
+                begin match List.find_index (fun (f',_) -> f = f') fields with
+                | Some i -> i
+                | None -> failwith "internal error"
+                end
+              in
+              { exp = Translate.field_var exp i; ty = actual_ty t }
           | None -> failwith "extracting a field which is not part of a record"
           end
       | _ -> failwith "extracting a field from a non-record"
       end
   | VSubscript(a, s) ->
-      let { exp = (); ty = t1 } = trans_var venv tenv lvl a in
-      let { exp = (); ty = t2 } = trans_exp venv tenv lvl s in
+      let { exp = exp1; ty = t1 } = trans_var venv tenv lvl ldone a in
+      let { exp = exp2; ty = t2 } = trans_exp venv tenv lvl ldone s in
       match t1 with
       | TArray(t3, _) ->
           unify_ty t2 TInt "the subscript should be an integer";
-          { exp = (); ty = actual_ty t3 }
+          { exp = Translate.subscript_var exp1 exp2; ty = actual_ty t3 }
       | _ -> failwith "taking subscript of a non-array"
 
-and trans_decls (venv : venv) (tenv : tenv) (lvl : Translate.level) (decls : decl list) : venv * tenv = 
+and trans_decls (venv : venv) (tenv : tenv) (lvl : Translate.level) (ldone : Temp.label option) (decls : decl list) : venv * tenv * Translate.exp list = 
   match decls with
-  | [] -> venv, tenv
+  | [] -> venv, tenv, []
   | d :: ds ->
-      let (venv', tenv') = trans_dec venv tenv lvl d in trans_decls venv' tenv' lvl ds
+      let (venv', tenv', es1) = trans_dec venv tenv lvl ldone d in
+      let (venv'', tenv'', es2) = trans_decls venv' tenv' lvl ldone ds in
+      venv'', tenv'', es1 @ es2
 
-and trans_dec (venv : venv) (tenv : tenv) (lvl : Translate.level) (decl : decl) : venv * tenv =
+and trans_dec (venv : venv) (tenv : tenv) (lvl : Translate.level) (ldone : Temp.label option) (decl : decl) : venv * tenv * Translate.exp list =
   match decl with
   | DVar { var; escape; annot; e } -> 
-      let { exp = (); ty = t1 } = trans_exp venv tenv lvl e in
+      let { exp = exp; ty = t1 } = trans_exp venv tenv lvl ldone e in
       begin match annot with
       | Some t2 ->
           begin match S.lookup tenv t2 with
@@ -193,7 +213,7 @@ and trans_dec (venv : venv) (tenv : tenv) (lvl : Translate.level) (decl : decl) 
       end;
       let access = Translate.alloc_local lvl !escape in
       let venv' = S.insert venv var (Env.VarEntry { ty = t1; access = access }) in
-      venv', tenv
+      venv', tenv, [Translate.var_dec access exp]
   | DFunctions fns ->
       let formals_ty params = 
         List.map (fun { typ = t; name = n; escape = e } ->
@@ -233,20 +253,19 @@ and trans_dec (venv : venv) (tenv : tenv) (lvl : Translate.level) (decl : decl) 
                   let access = Translate.alloc_local fn_level e in
                   S.insert acc n (Env.VarEntry { ty = t; access = access })
                 ) venv' (formals_ty params) in
-              let { exp = (); ty = t } = trans_exp venv'' tenv fn_level body in
+              let { exp = exp; ty = t } = trans_exp venv'' tenv fn_level None body in
+              Translate.proc_entry_exit fn_level exp;
               unify_ty t (result_ty result) "the return type of a function does not match an annotation"
           | _ -> failwith "internal error"
         ) fns
       in
-      venv', tenv
+      venv', tenv, []
   | DTypes tys ->
-      (* add headers to tenv  *)
       let tenv' = List.fold_left
         (fun acc (n, _) ->
           S.insert acc n (TName(n, ref None))
         ) tenv tys
       in
-      (* create conceptually infinite types *)
       let _ = List.iter
         (fun (n, t) ->
           match S.lookup tenv' n with
@@ -254,7 +273,6 @@ and trans_dec (venv : venv) (tenv : tenv) (lvl : Translate.level) (decl : decl) 
           | _ -> failwith "trans_dec - DTypes: internal error"
         ) tys
       in
-      (* check for cycles *)
       let _ = List.iter
         (fun (n, _) -> 
           let t = S.lookup_unsafe tenv' n in
@@ -276,7 +294,6 @@ and trans_dec (venv : venv) (tenv : tenv) (lvl : Translate.level) (decl : decl) 
           check t []
         ) tys
       in
-      (* normalise added types *)
       let tenv'' = List.fold_left (
         fun acc (n, _) ->
           match S.lookup tenv' n with
@@ -288,7 +305,7 @@ and trans_dec (venv : venv) (tenv : tenv) (lvl : Translate.level) (decl : decl) 
           | _ -> failwith "internal error"
       ) tenv tys
       in
-      venv, tenv''
+      venv, tenv'', []
 
 and trans_ty (tenv : tenv) (ty : typ) : ty = 
   match ty with
@@ -304,5 +321,6 @@ and trans_ty (tenv : tenv) (ty : typ) : ty =
       let t = trans_ty tenv (TName n) in
       TArray(t, ref ())
 
-let trans_prog (p : exp) : ty = 
-  (trans_exp Env.base_venv Env.base_tenv Translate.outermost p).ty
+let trans_prog (p : exp) : unit = 
+  let { exp = exp; ty = _ } = trans_exp Env.base_venv Env.base_tenv Translate.outermost None p in
+  Translate.proc_entry_exit Translate.outermost exp

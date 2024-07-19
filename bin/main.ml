@@ -15,6 +15,10 @@ let read_file file =
 let file = Sys.argv.(1)
 let source = read_file file
 let program = parse_from_string source
-let ty = Semant.trans_prog program
-let _ = print_endline (Types.string_of_ty ty)
+
+let _ = print_endline (Syntax.show_exp program)
+
+let _ = Semant.trans_prog program
+let frags = Translate.get_fragments ()
+let _ = List.iter (fun frag -> print_endline (Mips_frame.show_fragment frag)) frags
 

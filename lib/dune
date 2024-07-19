@@ -1,4 +1,7 @@
-(library (name tiger_ml))
+(library
+  (name tiger_ml)
+  (preprocess (pps ppx_deriving.ord ppx_deriving.show))
+ )
 
 (menhir
   (modules parser)

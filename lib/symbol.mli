@@ -1,4 +1,6 @@
 type symbol = string
+  [@@deriving show]
+
 type 'a table
 
 val empty : 'a table

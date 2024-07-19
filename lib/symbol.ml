@@ -1,4 +1,6 @@
-type symbol = string
+type symbol =
+  string
+  [@@deriving show]
 
 module SymbolMap = Map.Make(struct
   type t = symbol

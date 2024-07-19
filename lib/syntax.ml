@@ -1,40 +1,44 @@
-type symbol = string
-
 type var = 
-  | VSimple of symbol
-  | VField of var * symbol
+  | VSimple of Symbol.symbol
+  | VField of var * Symbol.symbol
   | VSubscript of var * exp
+  [@@deriving show]
 
 and exp = 
   | EVar of var
   | ENil
   | EInt of int
   | EString of string
-  | ECall of { func: symbol; args: exp list }
+  | ECall of { func: Symbol.symbol; args: exp list }
   | EOp of { e1: exp; op: op; e2: exp }
-  | ERecord of { typ: symbol; fields: (symbol * exp) list }
+  | ERecord of { typ: Symbol.symbol; fields: (Symbol.symbol * exp) list }
   | ESeq of exp list
   | EAssign of { var: var; e: exp }
   | EIf of { test: exp; then': exp; else': exp option }
   | EWhile of { test: exp; body: exp }
-  | EFor of { var: symbol; escape: bool ref; lo: exp; hi: exp; body: exp }
+  | EFor of { var: Symbol.symbol; escape: bool ref; lo: exp; hi: exp; body: exp }
   | EBreak
   | ELet of { decls: decl list; body: exp }
-  | EArray of { typ: symbol; size: exp; init: exp }
+  | EArray of { typ: Symbol.symbol; size: exp; init: exp }
+  [@@deriving show]
 
 and decl =
   | DFunctions of fundecl list
-  | DVar of { var: symbol; escape: bool ref; annot: symbol option; e: exp }
-  | DTypes of (symbol * typ) list
+  | DVar of { var: Symbol.symbol; escape: bool ref; annot: Symbol.symbol option; e: exp }
+  | DTypes of (Symbol.symbol * typ) list
+  [@@deriving show]
 
 and typ =
-  | TName of symbol
+  | TName of Symbol.symbol
   | TRecord of field list
-  | TArray of symbol
+  | TArray of Symbol.symbol
+  [@@deriving show]
 
-and field = { name: symbol; escape: bool ref; typ: symbol }
+and field = { name: Symbol.symbol; escape: bool ref; typ: Symbol.symbol }
+  [@@deriving show]
 
-and fundecl = { fname: symbol; params: field list; result: symbol option; body: exp }
+and fundecl = { fname: Symbol.symbol; params: field list; result: Symbol.symbol option; body: exp }
+  [@@deriving show]
 
 and op = 
   | OpAdd | OpSub | OpMul | OpDiv
