@@ -13,6 +13,11 @@ type frame = {
 [@@deriving show]
 
 
+type fragment = 
+  | Proc of { body : Tree.stmt; frame : frame }
+  | String of Temp.label * string
+  [@@ deriving show]
+
 let word_size = 4
 
 let fp = Temp.new_temp ()
@@ -42,11 +47,6 @@ let exp (access : access) (fp : Tree.expr) : Tree.expr =
 
 let external_call (fname : string) (args : T.expr list) : T.expr =
   T.ECall(T.ELabel(Temp.label_of_string fname), args)
-
-type fragment = 
-  | Proc of { body : Tree.stmt; frame : frame }
-  | String of Temp.label * string
-  [@@ deriving show]
 
 let proc_entry_exit1 (frame : frame) (stmt : Tree.stmt) : Tree.stmt = 
   stmt

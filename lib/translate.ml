@@ -44,7 +44,7 @@ type exp =
 
 let rec seq (ss : Tree.stmt list) : Tree.stmt = 
   match ss with
-  | [] -> failwith "internal error"
+  | [] -> T.SExpr(T.EConst 0)
   | [s] -> s
   | s :: ss -> Tree.SSeq(s, seq ss)
 
@@ -92,7 +92,7 @@ let simple_var (def_lvl, frame_access : access) (use_lvl : level) : exp =
     else
       match lvl.parent with
       | Some parent -> aux parent (Frame.exp (static_link lvl) fp)
-      | None -> failwith "internal error"
+      | None -> failwith "simple_var: internal error"
   in
   aux use_lvl (ETemp Frame.fp)
 
@@ -204,19 +204,19 @@ let break_exp (ldone : Temp.label) : exp =
   Nx(T.SJump(T.ELabel ldone, [ldone]))
 
 let call_exp (fn_label : Temp.label) (fn_lvl : level) (lvl : level) (es : exp list) : exp = 
-  let eq_parent_level l1 l2 = 
-    match l1.parent, l2.parent with
-    | Some l1, Some l2 -> eq_level l1 l2
-    | _ -> failwith "internal error"
+  let fn_parent_lvl = 
+    match fn_lvl.parent with
+    | Some l -> l
+    | _ -> failwith "call_exp: internal error 1"
   in
   let rec aux lvl fp = 
-    let parent_fp = Frame.exp (static_link lvl) fp in
-    if eq_parent_level fn_lvl lvl then
-      parent_fp
+    if eq_level fn_parent_lvl lvl then
+      fp
     else
+      let parent_fp = Frame.exp (static_link lvl) fp in
       match lvl.parent with
       | Some parent -> aux parent parent_fp
-      | None -> failwith "internal error"
+      | None -> failwith "call_exp: internal error 2"
   in
   let link = aux lvl (T.ETemp Frame.fp) in
   Ex(T.ECall(T.ELabel fn_label, link :: List.map (fun e -> un_ex e) es))

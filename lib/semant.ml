@@ -110,7 +110,7 @@ let rec trans_exp (venv : venv) (tenv : tenv) (lvl : Translate.level) (ldone : T
         in
         unify_ty t1 TInt "test expression in the if statement should be an integer";
         unify_ty t2 t3 "if branches should have compatible types"; 
-        { exp = Translate.if_exp exp1 exp2 exp3; ty = TUnit }
+        { exp = Translate.if_exp exp1 exp2 exp3; ty = t2 }
     | EWhile { test; body } ->
         let test_lab = Temp.new_label () in
         let { exp = exp1; ty = t1 } = tr_exp test in
@@ -174,7 +174,7 @@ and trans_var (venv : venv) (tenv : tenv) (lvl : Translate.level) (ldone : Temp.
               let i = 
                 begin match List.find_index (fun (f',_) -> f = f') fields with
                 | Some i -> i
-                | None -> failwith "internal error"
+                | None -> failwith "trans_var(VField): internal error"
                 end
               in
               { exp = Translate.field_var exp i; ty = actual_ty t }
@@ -246,7 +246,7 @@ and trans_dec (venv : venv) (tenv : tenv) (lvl : Translate.level) (ldone : Temp.
       in
       let _ = List.iter
         (fun { fname; params; result; body; } ->
-          match S.lookup venv fname with
+          match S.lookup venv' fname with
           | Some (Env.FunEntry { level = fn_level; _ }) ->
               let venv'' = List.fold_left
                 (fun acc (n, t, e) ->
@@ -255,8 +255,9 @@ and trans_dec (venv : venv) (tenv : tenv) (lvl : Translate.level) (ldone : Temp.
                 ) venv' (formals_ty params) in
               let { exp = exp; ty = t } = trans_exp venv'' tenv fn_level None body in
               Translate.proc_entry_exit fn_level exp;
+              print_endline (Types.string_of_ty t);
               unify_ty t (result_ty result) "the return type of a function does not match an annotation"
-          | _ -> failwith "internal error"
+          | _ -> failwith "trans_dec(DFunctions): internal error"
         ) fns
       in
       venv', tenv, []
@@ -280,7 +281,7 @@ and trans_dec (venv : venv) (tenv : tenv) (lvl : Translate.level) (ldone : Temp.
             match t with
             | TName(n, r) ->
                 begin match !r with
-                | None -> failwith "internal error"
+                | None -> failwith "trans_dec(DTypes): internal error"
                 | Some t -> 
                     if not (List.mem n (List.map fst tys)) then
                       ()
@@ -300,9 +301,9 @@ and trans_dec (venv : venv) (tenv : tenv) (lvl : Translate.level) (ldone : Temp.
           | Some(TName(_, r)) ->
               begin match !r with
               | Some t -> S.insert acc n t
-              | None -> failwith "internal error"
+              | None -> failwith "trans_dec(DTypes): internal error"
               end
-          | _ -> failwith "internal error"
+          | _ -> failwith "trans_dec(DTypes): internal error"
       ) tenv tys
       in
       venv, tenv'', []
