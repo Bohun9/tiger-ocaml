@@ -123,10 +123,10 @@ let rec trans_exp (venv : venv) (tenv : tenv) (lvl : Translate.level) (ldone : T
           ELet {
             decls = [
               DVar { var = var; escape = escape; annot = None; e = lo };
-              DVar { var = "_for_hi"; escape = ref true; annot = None; e = hi };
+              DVar { var = Symbol.symbol "_for_hi"; escape = ref true; annot = None; e = hi };
             ]; 
             body = EWhile {
-              test = EOp { e1 = EVar(VSimple var); op = OpLe; e2 = (EVar(VSimple "_for_hi")) };
+              test = EOp { e1 = EVar(VSimple var); op = OpLe; e2 = (EVar(VSimple (Symbol.symbol "_for_hi"))) };
               body = ESeq([
                 body;
                 EAssign { var = VSimple var; e = EOp { e1 = EVar(VSimple var); op = OpAdd; e2 = EInt 1 }};

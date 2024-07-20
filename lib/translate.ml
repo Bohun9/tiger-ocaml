@@ -17,7 +17,7 @@ let eq_level lvl1 lvl2 =
   lvl1.unique == lvl2.unique
 
 let outermost =
-  { frame = Frame.new_frame (Temp.label_of_string "main") []
+  { frame = Frame.new_frame (Temp.named_label "main") []
   ; parent = None
   ; unique = ref ()
   }

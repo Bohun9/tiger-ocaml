@@ -1,17 +1,17 @@
 type temp =
   Temp of int
-  [@@deriving show]
+  [@@deriving show { with_path = false }]
 
-type label =
-  Label of string
-  [@@deriving show]
+type label = Symbol.symbol
+  [@@deriving show { with_path = false }]
 
 let new_temp = 
   let r = ref 0 in
   fun () -> incr r; Temp !r
 
-let label_of_string s = Label s
-
 let new_label = 
   let l = ref 0 in
-  fun () -> incr l; Label ("L" ^ string_of_int !l)
+  fun () -> incr l; Symbol.symbol ("L" ^ string_of_int !l)
+
+let named_label str = 
+  Symbol.symbol str

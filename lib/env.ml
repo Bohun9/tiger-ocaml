@@ -18,8 +18,8 @@ let rec from_list xs =
   | (k, v) :: xs -> Symbol.insert (from_list xs) k v
 
 let base_tenv = from_list [
-  "int", TInt;
-  "string", TString;
+  Symbol.symbol "int", TInt;
+  Symbol.symbol "string", TString;
 ]
 
 let base_venv : enventry Symbol.table = from_list []

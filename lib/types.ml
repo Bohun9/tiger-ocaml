@@ -20,9 +20,9 @@ let rec string_of_ty ty =
   | TString -> "str"
   | TUnit -> "()"
   | TNil -> "nil"
-  | TRecord(fields, _) -> Printf.sprintf "rcd {%s}" (String.concat "," (List.map (fun (n, t) -> Printf.sprintf "%s=%s" n (string_of_ty t)) fields))
+  | TRecord(fields, _) -> Printf.sprintf "rcd {%s}" (String.concat "," (List.map (fun (n, t) -> Printf.sprintf "%s=%s" (Symbol.name n) (string_of_ty t)) fields))
   | TArray(t, _) -> Printf.sprintf "[%s]" (string_of_ty t)
-  | TName(n, _) -> Printf.sprintf "TName %s" n
+  | TName(n, _) -> Printf.sprintf "TName %s" (Symbol.name n)
 
 let eq_ty t1 t2 = 
   match t1, t2 with

@@ -11,7 +11,7 @@ type expr =
   | EMem of expr
   | ECall of expr * expr list
   | ESeq of stmt * expr
-  [@@deriving show]
+  [@@deriving show { with_path = false }]
 
 and stmt = 
   | SMove of expr * expr
@@ -20,16 +20,16 @@ and stmt =
   | SCJump of expr * relop * expr * Temp.label * Temp.label
   | SSeq of stmt * stmt
   | SLabel of Temp.label
-  [@@deriving show]
+  [@@deriving show { with_path = false }]
 
 and binop =
   | ADD | SUB | MUL | DIV
-  [@@deriving show]
+  [@@deriving show { with_path = false }]
 
 and relop =
   | EQ | NEQ
   | LT | LE | GT | GE
-  [@@deriving show]
+  [@@deriving show { with_path = false }]
 
 let not_rel relop = 
   match relop with

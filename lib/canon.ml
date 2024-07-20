@@ -10,6 +10,7 @@
    its false label.
  *)
 
+[@@@ocaml.warning "-8"] (* Trust me. *)
 
 module T = Tree
 
@@ -129,17 +130,17 @@ let rec split_last ss =
 
 let rec trace (table : bblock Symbol.table) (b : bblock) (todo : bblock list) : T.stmt list = 
   match b with
-  | (T.SLabel(Temp.Label l)) :: _ ->
+  | (T.SLabel l) :: _ ->
       let table = Symbol.insert table l [] in
       begin match split_last b with
-      | most, T.SJump(T.ELabel(Temp.Label l), _) ->
+      | most, T.SJump(T.ELabel l, _) ->
           begin match Symbol.lookup table l with
           | Some ((_::_) as b_next) ->
               most @ trace table b_next todo 
-          | None -> b @ (get_next table todo)
+          | _ -> b @ (get_next table todo)
           end
-      | most, T.SCJump(e1, op, e2, ((Temp.Label lt) as t), ((Temp.Label lf) as f)) ->
-          begin match Symbol.lookup table lt, Symbol.lookup table lf with
+      | most, T.SCJump(e1, op, e2, t, f) ->
+          begin match Symbol.lookup table t, Symbol.lookup table f with
           | _, Some((_::_) as b_next) -> b @ trace table b_next todo
           | Some((_::_) as b_next), _ -> 
               most @ [T.SCJump(e1, Tree.not_rel op, e2, f, t)] @ trace table b_next todo
@@ -151,14 +152,14 @@ let rec trace (table : bblock Symbol.table) (b : bblock) (todo : bblock list) : 
                 T.SJump(T.ELabel f, [f])
               ] @ get_next table todo
           end
-      | most, T.SJump(_, _) -> b @ get_next table todo
+      | _, T.SJump(_, _) -> b @ get_next table todo
       end
 
 
 and get_next (table : bblock Symbol.table) (todo : bblock list) : T.stmt list = 
   match todo with
   | [] -> []
-  | (T.SLabel (Temp.Label l) :: _) :: todo -> 
+  | (T.SLabel l :: _) :: todo -> 
       begin match Symbol.lookup table l with
       | Some ((_::_) as b) -> trace table b todo
       | _ -> get_next table todo
@@ -167,7 +168,7 @@ and get_next (table : bblock Symbol.table) (todo : bblock list) : T.stmt list =
 let trace_schedule ((blocks, ldone) : bblock list * Temp.label) : T.stmt list = 
   let _ = print_endline "trace_schedule" in
   let prog = get_next (List.fold_left
-    (fun acc ((T.SLabel (Temp.Label l) :: _) as b) ->
+    (fun acc ((T.SLabel l :: _) as b) ->
       Symbol.insert acc l b
     ) Symbol.empty blocks
   ) blocks

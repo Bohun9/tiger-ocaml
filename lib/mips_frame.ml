@@ -46,8 +46,8 @@ let exp (access : access) (fp : Tree.expr) : Tree.expr =
   | InReg t -> T.ETemp t
 
 let external_call (fname : string) (args : T.expr list) : T.expr =
-  T.ECall(T.ELabel(Temp.label_of_string fname), args)
+  T.ECall(T.ELabel(Temp.named_label fname), args)
 
-let proc_entry_exit1 (frame : frame) (stmt : Tree.stmt) : Tree.stmt = 
+let proc_entry_exit1 (_ : frame) (stmt : Tree.stmt) : Tree.stmt = 
   stmt
 
