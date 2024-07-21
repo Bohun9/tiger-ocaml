@@ -2,5 +2,5 @@ let
     type intarray = array of int
     var ar := intarray [10] of 0
 in
-    ar[10]
+    ar[0]
 end

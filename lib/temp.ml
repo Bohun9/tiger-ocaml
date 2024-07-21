@@ -5,6 +5,8 @@ type temp =
 type label = Symbol.symbol
   [@@deriving show { with_path = false }]
 
+let string_of_temp (Temp i) = "t" ^ (string_of_int i)
+
 let new_temp = 
   let r = ref 0 in
   fun () -> incr r; Temp !r

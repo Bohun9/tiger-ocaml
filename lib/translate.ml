@@ -1,4 +1,4 @@
-module Frame = Mips_frame
+module Frame = X86_frame
 module T = Tree
 
 type level = {
@@ -41,6 +41,7 @@ type exp =
   | Ex of Tree.expr
   | Nx of Tree.stmt
   | Cx of (Temp.label -> Temp.label -> Tree.stmt)
+  [@@deriving show { with_path = false } ]
 
 let rec seq (ss : Tree.stmt list) : Tree.stmt = 
   match ss with
@@ -177,15 +178,10 @@ let record_exp (es : exp list) : exp =
 
 let array_exp (size : exp) (init : exp) : exp = 
   let a = Temp.new_temp () in
-  let s = Temp.new_temp () in
   Ex(
     T.ESeq(
-      seq [
-        T.SMove(T.ETemp s, un_ex size);
-        T.SMove(T.ETemp a, Frame.external_call "malloc" [T.EBinop((T.EConst Frame.word_size), T.MUL, T.ETemp s)]);
-        T.SExpr(Frame.external_call "init_array" [T.ETemp a; T.ETemp s; un_ex init]);
-      ]
-      , T.ETemp a)
+      T.SMove(T.ETemp a, Frame.external_call "init_array" [un_ex size; un_ex init])
+    , T.ETemp a)
   )
 
 let while_exp (test : exp) (body : exp) (t : Temp.label) : exp = 

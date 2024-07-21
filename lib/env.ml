@@ -1,16 +1,16 @@
 open Types
 
 type enventry = 
-  | VarEntry of
-      { access: Translate.access
-      ; ty: ty
-      }
-  | FunEntry of
-      { level: Translate.level
-      ; label: Temp.label
-      ; formals: ty list
-      ; result: ty
-      }
+  | VarEntry of {
+      access: Translate.access;
+      ty: ty
+    }
+  | FunEntry of {
+      level: Translate.level;
+      label: Temp.label;
+      formals: ty list;
+      result: ty
+    }
 
 let rec from_list xs = 
   match xs with

@@ -102,7 +102,6 @@ let linearize (s0 : T.stmt) : T.stmt list =
 type bblock = T.stmt list
 
 let basic_blocks (ss : T.stmt list) : bblock list * Temp.label = 
-  let _ = print_endline "basic_blocks" in
   let ldone = Temp.new_label () in
   let rec blocks (ss : T.stmt list) (blist : bblock list) : bblock list = 
     match ss with
@@ -166,7 +165,6 @@ and get_next (table : bblock Symbol.table) (todo : bblock list) : T.stmt list =
       end
 
 let trace_schedule ((blocks, ldone) : bblock list * Temp.label) : T.stmt list = 
-  let _ = print_endline "trace_schedule" in
   let prog = get_next (List.fold_left
     (fun acc ((T.SLabel l :: _) as b) ->
       Symbol.insert acc l b
