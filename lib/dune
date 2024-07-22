@@ -1,6 +1,7 @@
 (library
   (name tiger_ml)
   (preprocess (pps ppx_deriving.ord ppx_deriving.show))
+  (libraries ocamlgraph)
  )
 
 (menhir

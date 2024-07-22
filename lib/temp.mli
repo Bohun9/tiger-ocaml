@@ -11,3 +11,6 @@ val string_of_temp : temp -> string
 
 val pp_temp : Format.formatter -> temp -> unit
 val show_temp : temp -> string
+val created_temps : unit -> temp list
+
+module TempSet : Set.S with type elt = temp

@@ -7,13 +7,28 @@ type label = Symbol.symbol
 
 let string_of_temp (Temp i) = "t" ^ (string_of_int i)
 
+let temp_counter = ref 0
+
 let new_temp = 
-  let r = ref 0 in
-  fun () -> incr r; Temp !r
+  fun () -> incr temp_counter; Temp !temp_counter
+
+let created_temps () = 
+  let rec aux n = 
+    if n > !temp_counter then
+      []
+    else
+      Temp n :: aux (n + 1)
+  in
+  aux 1
 
 let new_label = 
-  let l = ref 0 in
-  fun () -> incr l; Symbol.symbol ("L" ^ string_of_int !l)
+  let c = ref 0 in
+  fun () -> incr c; Symbol.symbol ("L" ^ string_of_int !c)
 
 let named_label str = 
   Symbol.symbol str
+
+module TempSet = Set.Make(struct 
+  type t = temp
+  let compare = compare
+end)

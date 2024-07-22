@@ -38,7 +38,12 @@ let _ = List.iter
         print_endline "-------ASSEMBLY------";
         let assembly = List.flatten (List.map (fun s -> Codegen.codegen s) (Canon.canonize body)) in
         print_endline (Assem.show_instr_list Utils.string_of_temp assembly);
-        print_endline ""
+        print_endline "";
+
+        let cfg = Control_flow.build_control_flow_graph assembly in
+        let igraph = Liveness.build_interference_graph cfg in
+        Liveness.show_graph igraph Utils.string_of_temp
+
     | X86_frame.String(_, _) as sf -> print_endline (X86_frame.show_fragment sf)
   ) frags
 
