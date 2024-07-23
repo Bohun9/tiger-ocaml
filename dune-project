@@ -2,7 +2,7 @@
 
 (using menhir 2.0)
 
-(name tiger_ml)
+(name tiger)
 
 (generate_opam_files true)
 
@@ -18,7 +18,7 @@
 (documentation https://url/to/documentation)
 
 (package
- (name tiger_ml)
+ (name tiger)
  (synopsis "A short synopsis")
  (description "A longer description")
  (depends ocaml dune)

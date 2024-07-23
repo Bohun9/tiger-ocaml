@@ -14,3 +14,4 @@ val show_temp : temp -> string
 val created_temps : unit -> temp list
 
 module TempSet : Set.S with type elt = temp
+module TempMap : Map.S with type key = temp

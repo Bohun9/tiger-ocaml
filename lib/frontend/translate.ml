@@ -17,7 +17,7 @@ let eq_level lvl1 lvl2 =
   lvl1.unique == lvl2.unique
 
 let outermost =
-  { frame = Frame.new_frame (Temp.named_label "main") []
+  { frame = Frame.new_frame (Temp.named_label "_start") []
   ; parent = None
   ; unique = ref ()
   }
@@ -43,11 +43,12 @@ type exp =
   | Cx of (Temp.label -> Temp.label -> Tree.stmt)
   [@@deriving show { with_path = false } ]
 
-let rec seq (ss : Tree.stmt list) : Tree.stmt = 
-  match ss with
-  | [] -> T.SExpr(T.EConst 0)
-  | [s] -> s
-  | s :: ss -> Tree.SSeq(s, seq ss)
+let seq = Tree.seq
+(* let rec seq (ss : Tree.stmt list) : Tree.stmt =  *)
+(*   match ss with *)
+(*   | [] -> T.SExpr(T.EConst 0) *)
+(*   | [s] -> s *)
+(*   | s :: ss -> Tree.SSeq(s, seq ss) *)
 
 let un_ex (e : exp) : Tree.expr = 
   match e with
@@ -89,6 +90,7 @@ let un_cx (e : exp) : (Temp.label -> Temp.label -> Tree.stmt) =
 let simple_var (def_lvl, frame_access : access) (use_lvl : level) : exp = 
   let rec aux lvl fp =
     if eq_level def_lvl lvl then
+      (* (print_endline (show_exp (Ex(Frame.exp frame_access fp))); *)
       Ex(Frame.exp frame_access fp)
     else
       match lvl.parent with
@@ -140,7 +142,10 @@ let seq_exp (e1 : exp) (e2 : exp) : exp =
   Ex(T.ESeq(un_nx e1, un_ex e2))
 
 let assign_exp (var : exp) (e : exp) : exp = 
-  Nx(T.SMove(un_ex var, un_ex e))
+  let res = Nx(T.SMove(un_ex var, un_ex e)) in
+  (* print_endline "ASSIGN"; *)
+  (* print_endline (show_exp res); *)
+  res
 
 let if_exp (e1 : exp) (e2 : exp) (e3 : exp) : exp = 
   let r = Temp.new_temp () in
@@ -230,5 +235,6 @@ let var_dec (_, frame_access : access) (e : exp) : exp =
 
 let proc_entry_exit (level : level) (body : exp) : unit = 
   let ret = T.SMove(T.ETemp Frame.rv, un_ex body) in
+  (* let ret = T.SMove(T.EConst 69, un_ex body) in *)
   fragments := Frame.Proc { frame = level.frame; body = Frame.proc_entry_exit1 level.frame ret } :: !fragments
 

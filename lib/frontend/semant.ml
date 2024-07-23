@@ -15,9 +15,9 @@ let unify_ty t1 t2 msg =
   else
     failwith msg
 
-(* The types returned from functions trans* and stored in the tenv and venv environments
-   are normalised (i.e. applied to the actual_ty function). *)
-
+(* The types returned from functions [trans_exp], [trans_stmt], ..., and stored in the
+   [tenv] and [venv] environments are normalised (i.e. applied to the actual_ty function).
+ *)
 let rec trans_exp (venv : venv) (tenv : tenv) (lvl : Translate.level) (ldone : Temp.label option) = 
   let rec tr_exp (e : exp) : expty = 
     match e with
@@ -249,13 +249,11 @@ and trans_dec (venv : venv) (tenv : tenv) (lvl : Translate.level) (ldone : Temp.
           match S.lookup venv' fname with
           | Some (Env.FunEntry { level = fn_level; _ }) ->
               let venv'' = List.fold_left
-                (fun acc (n, t, e) ->
-                  let access = Translate.alloc_local fn_level e in
+                (fun acc ((n, t, e), access) ->
                   S.insert acc n (Env.VarEntry { ty = t; access = access })
-                ) venv' (formals_ty params) in
+                ) venv' (List.combine (formals_ty params) (Translate.formals fn_level)) in
               let { exp = exp; ty = t } = trans_exp venv'' tenv fn_level None body in
               Translate.proc_entry_exit fn_level exp;
-              print_endline (Types.string_of_ty t);
               unify_ty t (result_ty result) "the return type of a function does not match an annotation"
           | _ -> failwith "trans_dec(DFunctions): internal error"
         ) fns

@@ -1,4 +1,4 @@
 (executable
- (public_name tiger_ml)
+ (public_name tiger)
  (name main)
- (libraries tiger_ml))
+ (libraries frontend backend))

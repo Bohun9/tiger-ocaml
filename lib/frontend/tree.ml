@@ -39,3 +39,10 @@ let not_rel relop =
   | GE -> LT
   | LE -> GT
   | GT -> LE
+
+let rec seq (ss : stmt list) : stmt = 
+  match ss with
+  | [] -> SExpr(EConst 0)
+  | [s] -> s
+  | s :: ss -> SSeq(s, seq ss)
+

@@ -1,0 +1,5 @@
+(library
+  (name backend)
+  (preprocess (pps ppx_deriving.ord ppx_deriving.show))
+  (libraries frontend ocamlgraph)
+ )

@@ -1,5 +1,5 @@
-(* The abstract assembly that the `Codegen` module will produce
-   from the `Tree` representation. At this point, we don't need
+(* The abstract assembly that the [Codegen] module will produce
+   from the [Tree] representation. At this point, we don't need
    the exact form of the instructions, only their sources, destinations
    and possible jump targets.
  *)
@@ -36,12 +36,12 @@ let format (say_temp : Temp.temp -> string) (i : instr) : string =
     in
     f (List.of_seq (String.to_seq assem))
   in
-  let indent = String.make 2 ' ' in
+  let indent assem = if String.length assem > 0 then String.make 4 ' ' else "" in
   match i with
-  | IOper { assem; dst; src; jump = None } -> indent ^ speak assem dst src []
-  | IOper { assem; dst; src; jump = Some jmp } -> indent ^ speak assem dst src jmp
+  | IOper { assem; dst; src; jump = None } -> indent assem ^ speak assem dst src []
+  | IOper { assem; dst; src; jump = Some jmp } -> indent assem ^ speak assem dst src jmp
   | ILabel { assem; _ } -> assem
-  | IMove { assem; dst; src } -> indent ^ speak assem [dst] [src] []
+  | IMove { assem; dst; src } -> indent assem ^ speak assem [dst] [src] []
 
 let show_instr_list (say_temp : Temp.temp -> string) is = 
-  "[\n" ^ (String.concat "\n" (List.map (format say_temp) is)) ^ "\n]"
+  String.concat "" (List.map (format say_temp) is)

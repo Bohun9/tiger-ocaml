@@ -1,10 +1,4 @@
-(* The abstract syntax of the Tiger language.
-   The main syntactic categories are:
-     - `var` for l-values
-     - `exp` for expressions
-     - `decl` for declarations
-     - `typ` for types
- *)
+(* The abstract syntax of the Tiger language. *)
 
 type var = 
   | VSimple of Symbol.symbol

@@ -1,3 +1,4 @@
+open Frontend
 module A = Assem
 
 module ControlFlowGraph = Graph.Imperative.Digraph.Abstract(struct

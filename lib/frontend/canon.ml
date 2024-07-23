@@ -1,12 +1,12 @@
 (* The main task of this module is to linearize the representation produced by the
-   `Translate` module to make it closer to the assembly language.
+   [Translate] module to make it closer to the assembly language.
 
-   We achieve that by eliminating all `ESeq` constructors. Furthermore, we should
+   We achieve that by eliminating all [ESeq] constructors. Furthermore, we should
    also break expressions so that they don't affect the control flow. In this case,
    we achieve this by saving each function call to a new temporary.
 
-   Additionally, the `CJump` instruction in the `Tree` module contains two jump 
-   targets. We must transform the program so that each `CJump` is followed by
+   Additionally, the [CJump] instruction in the [Tree] module contains two jump 
+   targets. We must transform the program so that each [CJump] is followed by
    its false label.
  *)
 
@@ -30,10 +30,10 @@ let linearize (s0 : T.stmt) : T.stmt list =
     | _, T.ELabel _ -> true
     | _ -> false
   in
-  (* The functions `do_stmt` and `do_expr` linearize statements and expressions, respectively.
+  (* The functions [do_stmt] and [do_expr] linearize statements and expressions, respectively.
      Most of the cases are very similar: we have a bunch of subexpressions that must be solved recursively
      and then we need to merge the resulting statements together and put clean expressions back into the constructor.
-     We can abstract this problem into a new function, `reorder`. 
+     We can abstract this problem into a new function, [reorder]. 
    *)
   let rec reorder es =
     match es with

@@ -9,9 +9,8 @@ type ty =
   | TArray of ty * unique
   | TName of Symbol.symbol * ty option ref
 
-(* The TName constructor is used to allow recursive types and
-   the constructor None will be there only during processing of type declarations.
-   Additionally, it records information about type aliases, which is useful for checking for cycles in types.
+(* The [TName] constructor is used to allow recursive types. It will be filled with [None]
+   only during processing of type declarations.
 *)
 
 let rec string_of_ty ty = 

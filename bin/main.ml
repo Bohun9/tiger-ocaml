@@ -1,5 +1,30 @@
-open Tiger_ml
+open Frontend
+open Backend
 open Utils
+
+let usage_msg = ""
+let file = ref None
+let debug = ref false
+
+let anon_fun f = file := Some f
+let speclist = [ ("--debug", Arg.Set debug, "Show all intermediate languages") ]
+
+let _ = Arg.parse speclist anon_fun usage_msg
+let file = 
+  match !file with
+  | Some f -> f
+  | None -> 
+      Printf.eprintf "error: the file was not provided\n";
+      exit 1
+
+let debug phase s = 
+  if !debug then (
+    Printf.eprintf "---------- %s ---------\n" phase;
+    Printf.eprintf "%s\n" s;
+    Printf.eprintf "\n";
+    flush stderr
+  ) else
+    ()
 
 let read_file file =
   let ch =
@@ -12,38 +37,36 @@ let read_file file =
   close_in ch;
   s
 
-let file = Sys.argv.(1)
 let source = read_file file
 let program = parse_from_string source
-
-let _ = print_endline "-------AST------"
-let _ = print_endline (Syntax.show_exp program)
-let _ = print_endline ""
+let _ = Find_escape.find_escape program
+let _ = debug "AST" (Syntax.show_exp program)
 
 let _ = Semant.trans_prog program
 let frags = Translate.get_fragments ()
 
-let _ = List.iter
-  (fun frag ->
+let functions, strings = List.fold_left
+  (fun (fs, ss) frag ->
     match frag with
     | X86_frame.Proc { body; frame } ->
-        print_endline "-------FRAME------";
-        print_endline (X86_frame.show_frame frame);
-        print_endline "";
+        let _ = debug "FRAME" (X86_frame.show_frame frame) in
+        let trees = Canon.canonize body in
+        let _ = debug "CANONIZED TREES" (show_tree_list trees) in
+        let abstract_assembly = Codegen.codegen trees in
+        let _ = debug "ABSTRACT ASSEMBLY" (show_abstract_assembly abstract_assembly) in
+        let assembly, allocation = Register_allocation.alloc abstract_assembly frame in
+        let assembly_str = show_real_assembly assembly allocation in
+        let _ = debug "X86 ASSEMBLY" assembly_str in
+        assembly_str :: fs, ss 
+    | X86_frame.String(_, _) as sf ->
+        fs, ss
+  ) ([], []) frags
 
-        print_endline "-------TREES------";
-        List.iter (fun s -> print_endline (Tree.show_stmt s)) (Canon.canonize body);
-        print_endline "";
+let _ = debug "FINAL PROGRAM" ""
 
-        print_endline "-------ASSEMBLY------";
-        let assembly = List.flatten (List.map (fun s -> Codegen.codegen s) (Canon.canonize body)) in
-        print_endline (Assem.show_instr_list Utils.string_of_temp assembly);
-        print_endline "";
+let header = ".globl _start\n"
+let data = ".section .data\n" ^ String.concat "" strings
+let text = ".section .text\n" ^ String.concat "" functions
+let final_program = header ^ data ^ text
 
-        let cfg = Control_flow.build_control_flow_graph assembly in
-        let igraph = Liveness.build_interference_graph cfg in
-        Liveness.show_graph igraph Utils.string_of_temp
-
-    | X86_frame.String(_, _) as sf -> print_endline (X86_frame.show_fragment sf)
-  ) frags
-
+let _ = print_string final_program
