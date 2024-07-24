@@ -1,6 +1,6 @@
 let
     type intarray = array of int
-    var ar := intarray [10] of 0
+    var ar := intarray [10] of 77
 in
-    ar[0]
+    ar[9]
 end

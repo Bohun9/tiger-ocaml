@@ -237,7 +237,7 @@ and trans_dec (venv : venv) (tenv : tenv) (lvl : Translate.level) (ldone : Temp.
           let new_level = Translate.new_level lvl label (List.map (fun p -> !(p.escape)) params) in
           let ent = Env.FunEntry {
             label = label;
-            level = new_level;
+            level = Some new_level;
             formals = List.map (fun (_, t, _) -> t) (formals_ty params);
             result = result_ty result;
           } in
@@ -247,7 +247,7 @@ and trans_dec (venv : venv) (tenv : tenv) (lvl : Translate.level) (ldone : Temp.
       let _ = List.iter
         (fun { fname; params; result; body; } ->
           match S.lookup venv' fname with
-          | Some (Env.FunEntry { level = fn_level; _ }) ->
+          | Some (Env.FunEntry { level = Some fn_level; _ }) ->
               let venv'' = List.fold_left
                 (fun acc ((n, t, e), access) ->
                   S.insert acc n (Env.VarEntry { ty = t; access = access })

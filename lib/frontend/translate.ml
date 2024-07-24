@@ -17,7 +17,7 @@ let eq_level lvl1 lvl2 =
   lvl1.unique == lvl2.unique
 
 let outermost =
-  { frame = Frame.new_frame (Temp.named_label "_start") []
+  { frame = Frame.new_frame (Temp.named_label "tigermain") []
   ; parent = None
   ; unique = ref ()
   }
@@ -173,7 +173,7 @@ let record_exp (es : exp list) : exp =
   Ex(
     T.ESeq(
       T.SSeq(
-        T.SMove(T.ETemp r, Frame.external_call "malloc" [T.EConst (Frame.word_size * List.length es)])
+        T.SMove(T.ETemp r, Frame.external_call "allocRecord" [T.EConst (Frame.word_size * List.length es)])
         , seq (List.mapi
             (fun i e -> T.SMove(T.EMem(T.EBinop(T.ETemp r, ADD, T.EConst (Frame.word_size * i))), un_ex e))
           es)
@@ -185,7 +185,7 @@ let array_exp (size : exp) (init : exp) : exp =
   let a = Temp.new_temp () in
   Ex(
     T.ESeq(
-      T.SMove(T.ETemp a, Frame.external_call "init_array" [un_ex size; un_ex init])
+      T.SMove(T.ETemp a, Frame.external_call "initArray" [un_ex size; un_ex init])
     , T.ETemp a)
   )
 
@@ -204,23 +204,30 @@ let while_exp (test : exp) (body : exp) (t : Temp.label) : exp =
 let break_exp (ldone : Temp.label) : exp = 
   Nx(T.SJump(T.ELabel ldone, [ldone]))
 
-let call_exp (fn_label : Temp.label) (fn_lvl : level) (lvl : level) (es : exp list) : exp = 
-  let fn_parent_lvl = 
-    match fn_lvl.parent with
-    | Some l -> l
-    | _ -> failwith "call_exp: internal error 1"
-  in
-  let rec aux lvl fp = 
-    if eq_level fn_parent_lvl lvl then
-      fp
-    else
-      let parent_fp = Frame.exp (static_link lvl) fp in
-      match lvl.parent with
-      | Some parent -> aux parent parent_fp
-      | None -> failwith "call_exp: internal error 2"
-  in
-  let link = aux lvl (T.ETemp Frame.fp) in
-  Ex(T.ECall(T.ELabel fn_label, link :: List.map (fun e -> un_ex e) es))
+let call_exp (fn_label : Temp.label) (fn_lvl : level option) (lvl : level) (es : exp list) : exp = 
+  let es = List.map (fun e -> un_ex e) es in
+  match fn_lvl with
+  | Some fn_lvl ->
+    let fn_parent_lvl = 
+      match fn_lvl.parent with
+      | Some l -> l
+      | _ -> failwith "call_exp: internal error 1"
+    in
+    let rec aux lvl fp = 
+      if eq_level fn_parent_lvl lvl then
+        fp
+      else
+        let parent_fp = Frame.exp (static_link lvl) fp in
+        match lvl.parent with
+        | Some parent -> aux parent parent_fp
+        | None -> failwith "call_exp: internal error 2"
+    in
+    let _ = Frame.register_function_call lvl.frame (List.length es + 1) in
+    let link = aux lvl (T.ETemp Frame.fp) in
+    Ex(T.ECall(T.ELabel fn_label, link :: es))
+  | None ->
+      let _ = Frame.register_function_call lvl.frame (List.length es) in
+      Ex(T.ECall(T.ELabel fn_label, es))
 
 let let_exp (es : exp list) (body : exp) : exp = 
   Ex(

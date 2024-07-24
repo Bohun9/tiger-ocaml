@@ -64,7 +64,7 @@ let functions, strings = List.fold_left
 
 let _ = debug "FINAL PROGRAM" ""
 
-let header = ".globl _start\n"
+let header = ".globl tigermain\n"
 let data = ".section .data\n" ^ String.concat "" strings
 let text = ".section .text\n" ^ String.concat "" functions
 let final_program = header ^ data ^ text

@@ -117,14 +117,14 @@ let codegen_one (stmt : Tree.stmt) : A.instr list =
     match args with
     | [] -> []
     | a :: args ->
-        let r =
-          begin match List.nth_opt X86_frame.args_regs i with
-          | Some r -> r
-          | None -> error "the function has more that 6 arguments"
-          end
-        in
-        munch_stmt (T.SMove(T.ETemp r, a));
-        r :: munch_args args (i + 1)
+        if i < 6 then
+          let r = List.nth X86_frame.args_regs i in
+          munch_stmt (T.SMove(T.ETemp r, a));
+          r :: munch_args args (i + 1)
+        else
+          let j = i - 6 in
+          munch_stmt (T.SMove(T.EMem(T.EBinop(T.ETemp F.rsp, T.ADD, T.EConst (F.word_size * j))), a));
+          munch_args args (i + 1)
   and munch_stmt (s : Tree.stmt) : unit = 
     let internal_error = internal_error "munch_stmt" in
     match s with

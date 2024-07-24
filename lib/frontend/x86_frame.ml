@@ -9,6 +9,7 @@ type frame = {
   label : Temp.label;
   formals : access list;
   locals_num : int ref;
+  max_args_call : int ref;
 }
 [@@deriving show { with_path = false}]
 
@@ -139,13 +140,16 @@ let alloc_local (frm : frame) (escape : bool) : access =
 
 let new_frame (label : Temp.label) (formals : bool list) : frame = 
   let locals_num = ref 0 in
-  let frame = { label = label; formals = []; locals_num = ref 0 } in
+  let frame = { label = label; formals = []; locals_num = ref 0; max_args_call = ref 0 } in
   let formals = List.fold_left
     (fun acc esc ->
       acc @ [alloc_local frame esc]
     ) [] formals
   in
   { frame with formals = formals }
+  
+let register_function_call (frame : frame) (args_num : int) : unit = 
+  frame.max_args_call := max !(frame.max_args_call) args_num
 
 let formals frm = frm.formals
 let label frm = frm.label
@@ -163,7 +167,14 @@ let external_call (fname : string) (args : T.expr list) : T.expr =
 let proc_entry_exit1 (frame : frame) (stmt : Tree.stmt) : Tree.stmt = 
   let move_args =
     List.mapi (fun i access ->
-      Tree.SMove(exp access (T.ETemp fp), T.ETemp (List.nth args_regs i))
+      let src = 
+        if i < 6 then
+          T.ETemp (List.nth args_regs i)
+        else
+          let j = i - 6 in
+          T.EMem(T.EBinop(T.ETemp fp, T.ADD, T.EConst ((j + 2) * word_size)))
+      in
+      Tree.SMove(exp access (T.ETemp fp), src)
     ) frame.formals
   in
   let prologue, epilog = 
@@ -180,9 +191,9 @@ let proc_entry_exit1 (frame : frame) (stmt : Tree.stmt) : Tree.stmt =
 let proc_entry_exit2 (code : Assem.instr list) : Assem.instr list = 
   code @ [ Assem.IOper { assem = ""; dst = []; src = rax :: special_regs @ callee_saved; jump = None } ]
 
-(* [proc_entry_exit3] handles stack pointers and injects the exit syscall in the _start function. *)
+(* [proc_entry_exit3] handles stack pointers registers.  *)
 let proc_entry_exit3 (frame : frame) (code : Assem.instr list) : Assem.instr list = 
-  let frame_size = word_size * !(frame.locals_num) in
+  let frame_size = word_size * (!(frame.locals_num) + (max 0 !(frame.max_args_call))) in
   let frame_size = frame_size + (16 - (frame_size mod 16)) mod 16 in
   let (label :: code) = code in
   let prologue =
@@ -202,14 +213,5 @@ let proc_entry_exit3 (frame : frame) (code : Assem.instr list) : Assem.instr lis
       Assem.IOper { assem = "ret\n"; src = []; dst = []; jump = None };
     ]
   in
-  let exit_syscall = 
-    if Symbol.name frame.label = "_start" then [
-        Assem.IOper { assem = "movq %rax, %rdi\n"; src = []; dst = []; jump = None };
-        Assem.IOper { assem = "movq $60, %rax\n"; src = []; dst = []; jump = None };
-        Assem.IOper { assem = "syscall\n"; src = []; dst = []; jump = None };
-      ]
-    else
-      []
-  in
-  label :: prologue @ prologue_frame @ code @ exit_syscall @ epilogue_frame @ epilogue
+  label :: prologue @ prologue_frame @ code @ epilogue_frame @ epilogue
 
