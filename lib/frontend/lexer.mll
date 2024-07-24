@@ -57,16 +57,43 @@ let make_id s =
 
 let make_symbol s = 
   Hashtbl.find symbols_map s
+
+let unescape esc = 
+  match esc with
+  | '"' -> '"'
+  | '\\' -> '\\'
+  | 'n' -> '\n'
+  | 't' -> '\t'
 }
 
 let digits = ['0'-'9']
 let int = digits+
-let identifier = ['a'-'z' '_'] ['a'-'z' '_' '0'-'9']*
+let identifier = ['a'-'z' 'A'-'Z' '_'] ['a'-'z' 'A'-'Z' '_' '0'-'9']*
 let symbols = ['(' ')' '{' '}' '[' ']' '&' '|' '=' '+' '-' '*' '/' '<' '>' ',' '.' ':' ';'] | "<>" | "<=" | ">=" | ":="
+let escape = ['"' '\\' 'n' 't']
 
 rule token = parse
   | [' ' '\t' '\n'] { token lexbuf }
   | int as i { INT (int_of_string i) }
   | identifier as s { make_id s }
   | symbols as s { make_symbol s }
+  | '"' {
+      let b = Buffer.create 15 in
+      string_token b lexbuf
+    }
   | eof { EOF }
+
+and string_token buf = parse
+  | '"' { STR (Buffer.contents buf) }
+  | [^'\\' '"']+ as str {
+      Buffer.add_string buf str;
+      string_token buf lexbuf
+    }
+  | '\\' (escape as esc) {
+      Buffer.add_char buf (unescape esc);
+      string_token buf lexbuf
+    }
+  | '\\' {
+      failwith "invalid escape code"
+    }
+

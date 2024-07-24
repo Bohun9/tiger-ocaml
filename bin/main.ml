@@ -58,8 +58,8 @@ let functions, strings = List.fold_left
         let assembly_str = show_real_assembly assembly allocation in
         let _ = debug "X86 ASSEMBLY" assembly_str in
         assembly_str :: fs, ss 
-    | X86_frame.String(_, _) as sf ->
-        fs, ss
+    | X86_frame.String(l, s) as sf ->
+        fs, X86_frame.string l s :: ss
   ) ([], []) frags
 
 let _ = debug "FINAL PROGRAM" ""

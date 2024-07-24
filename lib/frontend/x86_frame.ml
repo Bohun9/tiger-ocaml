@@ -162,6 +162,11 @@ let exp (access : access) (fp : Tree.expr) : Tree.expr =
 let external_call (fname : string) (args : T.expr list) : T.expr =
   T.ECall(T.ELabel(Temp.named_label fname), args)
 
+let string (label : Temp.label) (str : string) : string = 
+  let ascii = String.escaped str in
+  let length = String.length ascii in
+  Printf.sprintf "%s:\n    .quad %d\n    .ascii \"%s\"\n" (Temp.show_label label) length ascii 
+
   (* [proc_entry_exit1] adds a code for saving and restoring callee-saved registers.
      It also moves function arguments to proper temporaries. *)
 let proc_entry_exit1 (frame : frame) (stmt : Tree.stmt) : Tree.stmt = 

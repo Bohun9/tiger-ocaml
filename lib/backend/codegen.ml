@@ -36,7 +36,14 @@ let codegen_one (stmt : Tree.stmt) : A.instr list =
             }
           )
         )
-    | T.ELabel _ -> error "ELabel"
+    | T.ELabel l -> 
+        result (fun r -> emit (
+            A.IOper {
+              assem = Printf.sprintf "movq $%s, `d0\n" (Temp.show_label l);
+              dst = [r]; src = []; jump = None;
+            }
+          )
+        )
     | T.ETemp t -> t
     | T.EBinop(T.EConst i, ADD, e1) ->
         munch_expr (T.EBinop(e1, ADD, T.EConst i))
@@ -178,7 +185,15 @@ let codegen_one (stmt : Tree.stmt) : A.instr list =
             dst = X86_frame.call_trashed_regs; src = munch_args(args) 0; jump = None
           }
         )
+    | T.SExpr (T.ETemp _) -> ()
     | T.SExpr _ -> error "SExpr"
+        (* let t = Temp.new_temp () in *)
+        (* emit ( *)
+        (*   A.IOper { *)
+        (*     assem = Printf.sprintf "movq `s0, `d0\n"; *)
+        (*     dst = [t]; src = [munch_expr e]; jump = None *)
+        (*   } *)
+        (* ) *)
     | T.SJump(T.ELabel l, [l']) when l = l' -> 
         emit (
           A.IOper {
