@@ -1,0 +1,2 @@
+for i := 65 to 90 do
+    print(chr(i)) // out: ABCDEFGHIJKLMNOPQRSTUVWXYZ

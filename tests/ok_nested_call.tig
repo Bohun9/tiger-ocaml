@@ -1,6 +1,0 @@
-let 
-    var x := 0
-    function f(n : int) : int = 0
-in
-    x := f(0)
-end

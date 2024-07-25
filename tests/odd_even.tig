@@ -9,7 +9,8 @@ let
             0
         else
             1 - even(n - 1)
-in
-    even(11) + odd(11)
-end
+in (
+    print(chr(97 + even(100))); // out: b
+    print(chr(97 + odd(100))) // out: a
+) end
 

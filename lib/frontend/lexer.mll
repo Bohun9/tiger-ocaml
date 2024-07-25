@@ -81,6 +81,7 @@ rule token = parse
       let b = Buffer.create 15 in
       string_token b lexbuf
     }
+  | "//" { skip_line lexbuf; token lexbuf }
   | eof { EOF }
 
 and string_token buf = parse
@@ -96,4 +97,8 @@ and string_token buf = parse
   | '\\' {
       failwith "invalid escape code"
     }
+
+and skip_line = parse
+  | "\n" | eof { () }
+  | _ { skip_line lexbuf }
 

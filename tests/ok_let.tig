@@ -1,7 +1,0 @@
-let 
-    type t1 = int
-    type t2 = t1
-    var x : t2 := 0
-in
-    x
-end

@@ -47,6 +47,7 @@ let color ({ igraph; mgraph } : Liveness.liveness_info) (precolored : allocation
   let medge = G.mem_edge mgraph in
   let nodes = G.get_nodes_set in
   let degree = G.out_degree in
+  let mdegree = degree mgraph in
   let idegree = degree igraph in
   let low_degree u = degree igraph u < k in
   let move_related u = degree mgraph u > 0 in
@@ -171,7 +172,15 @@ let color ({ igraph; mgraph } : Liveness.liveness_info) (precolored : allocation
 
   let spill () : bool =
     let candidates = nodes igraph -- precolored_temps in
-    let c = TempSet.min_elt candidates in
+    let priority x = idegree x - mdegree x in
+    let c =
+      TempSet.fold (fun x acc ->
+        if priority x > priority acc then
+          x
+        else
+          acc
+      ) candidates (TempSet.min_elt candidates)
+    in
     add_to_select_stack c;
     remove c;
     true

@@ -1,0 +1,6 @@
+let 
+    type intlist = {head: int, tail: intlist}
+    var l := intlist {head = 97, tail = intlist {head = 98, tail = nil}}
+in
+    print(chr(l.tail.head)) // out: b
+end

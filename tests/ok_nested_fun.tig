@@ -1,7 +1,0 @@
-let
-    var x := 0
-    function f() = x := 1
-in
-    (f(); x)
-end
-            

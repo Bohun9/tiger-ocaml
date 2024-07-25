@@ -1,6 +1,0 @@
-let
-    type intarray = array of int
-    var ar := intarray [10] of 77
-in
-    ar[9]
-end

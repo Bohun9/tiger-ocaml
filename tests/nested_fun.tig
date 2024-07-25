@@ -1,0 +1,7 @@
+let
+    var x := 0
+    function f() = x := 97
+in
+    (f(); print(chr(x))) // out: a
+end
+            

@@ -1,0 +1,19 @@
+let
+    type tree = {item: int, children: treelist}
+    type treelist = {head: tree, tail: treelist}
+    var t1 := tree {item = 97, children = nil}
+    var t2 := tree {item = 98, children = treelist { head = t1, tail = treelist { head = t1, tail = nil } } }
+
+    function printTreeList(ts : treelist) = 
+        if ts <> nil then (
+            printTree(ts.head);
+            printTreeList(ts.tail)
+        )
+
+    function printTree(t : tree) = ( 
+        print(chr(t.item));
+        printTreeList(t.children)
+    )
+in
+    printTree(t2) // out: baa
+end

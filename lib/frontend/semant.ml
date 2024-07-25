@@ -45,22 +45,26 @@ let rec trans_exp (venv : venv) (tenv : tenv) (lvl : Translate.level) (ldone : T
     | EOp { e1; op; e2 } -> 
         let { exp = exp1; ty = t1 } = tr_exp e1 in
         let { exp = exp2; ty = t2 } = tr_exp e2 in
-        let ty =
+        let ty, string_eq =
           begin match op with
           | _ when List.mem op [OpAdd; OpSub; OpMul; OpDiv] ->
               unify_ty t1 TInt "the first operand of an arithmetic operation should be an integer";
               unify_ty t2 TInt "the second operand of an arithmetic operation should be an integer";
-              TInt
+              TInt, false
           | _ when List.mem op [OpEq; OpNeq] ->
-              unify_ty t1 t2 "operands of equality operators should be compatible"; TInt
+              unify_ty t1 t2 "operands of equality operators should be compatible";
+              begin match t1 with
+              | TString -> TInt, true
+              | _ -> TInt, false
+              end
           | _ ->
               begin match t1, t2 with
-              | TInt, TInt | TString, TString -> TInt
-              | _ -> failwith "wrong types of operands for a comparision operation"
+              | TInt, TInt -> TInt, false
+              | _ -> failwith "wrong types of operands for a comparison operation"
               end
           end
         in
-        { exp = Translate.op_exp exp1 op exp2; ty = ty }
+        { exp = Translate.op_exp exp1 op exp2 string_eq; ty = ty }
     | ERecord { typ; fields } -> 
         begin match S.lookup tenv typ with
         | Some (TRecord(fields_ty1, _) as t) ->

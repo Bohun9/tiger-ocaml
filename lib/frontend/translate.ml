@@ -109,7 +109,7 @@ let nil_exp = Ex(T.EConst 0)
 
 let int_exp (i : int) : exp = Ex(T.EConst i)
 
-let op_exp (e1 : exp) (op : Syntax.op) (e2 : exp) : exp = 
+let op_exp (e1 : exp) (op : Syntax.op) (e2 : exp) (string_eq : bool) : exp = 
   match op with
   | OpAdd | OpSub | OpMul | OpDiv ->
       let op =
@@ -122,6 +122,8 @@ let op_exp (e1 : exp) (op : Syntax.op) (e2 : exp) : exp =
         end
       in
       Ex(T.EBinop(un_ex e1, op, un_ex e2))
+  | OpEq | OpNeq when string_eq ->
+      Ex(Frame.external_call "stringEqual" [un_ex e1; un_ex e2])
   | OpEq | OpNeq | OpLt | OpLe | OpGt | OpGe ->
       let op =
         begin match op with

@@ -1,6 +1,0 @@
-let 
-    type intlist = {head: int, tail: intlist}
-    var l := intlist {head = 111, tail = intlist {head = 222, tail = nil}}
-in
-    l.tail.head
-end

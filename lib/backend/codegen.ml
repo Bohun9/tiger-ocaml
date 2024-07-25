@@ -3,14 +3,6 @@ module A = Assem
 module T = Tree
 module F = X86_frame
 
-exception CodegenError of string
-
-let internal_error fn_name ctor_name =
-  raise (CodegenError (Printf.sprintf "this place should not have been reached %s(%s)" fn_name ctor_name))
-
-let error msg = 
-  raise (CodegenError msg)
-
 let move ~dst ~src =
   A.IMove {
     assem = "movq `s0, `d0\n";
@@ -26,7 +18,6 @@ let codegen_one (stmt : Tree.stmt) : A.instr list =
     k t; t
   in
   let rec munch_expr (e : Tree.expr) : Temp.temp = 
-    let internal_error = internal_error "munch_expr" in
     match e with
     | T.EConst i ->
         result (fun r -> emit (
@@ -66,7 +57,7 @@ let codegen_one (stmt : Tree.stmt) : A.instr list =
                 | T.ADD -> "addq"
                 | T.SUB -> "subq"
                 | T.MUL -> "imulq"
-                | _ -> error ""
+                | _ -> failwith ""
               in
               emits [
                 move ~dst:r ~src:t1;
@@ -83,14 +74,12 @@ let codegen_one (stmt : Tree.stmt) : A.instr list =
                 };
                 move ~dst:F.rax ~src:t1;
                 A.IOper {
-                  assem = "idivq `s0\n";
-                  dst = [F.rbp; F.rax]; src = [F.rbp; F.rax; t2]; jump = None
+                  assem = "idivq `s2\n";
+                  dst = [F.rdx; F.rax]; src = [F.rdx; F.rax; t2]; jump = None
                 };
                 move ~dst:r ~src:F.rax;
               ]
         )
-    (* | T.EMem(T.EBinop(e1, ADD, T.EBinop(T.EConst i, MUL, e2))) when List.mem i [1;2;4;8] -> *)
-    (*     munch_expr (T.EMem(T.EBinop(e1, ADD, T.EBinop(e2, MUL, T.EConst i)))) *)
     | T.EMem(T.EBinop(e1, ADD, T.EBinop(e2, MUL, T.EConst i))) when List.mem i [1;2;4;8] ->
         result (fun r -> emit (
             A.IOper {
@@ -99,8 +88,6 @@ let codegen_one (stmt : Tree.stmt) : A.instr list =
             }
           )
         )
-    (* | T.EMem(T.EBinop(T.EConst i, T.ADD, e1)) -> *)
-    (*     munch_expr (T.EMem(T.EBinop(e1, T.ADD, T.EConst i))) *)
     | T.EMem(T.EBinop(e1, T.ADD, T.EConst i)) ->
         result (fun r -> emit (
             A.IOper {
@@ -117,8 +104,8 @@ let codegen_one (stmt : Tree.stmt) : A.instr list =
             }
           )
         )
-    | T.ECall(_, _) -> error "ECall"
-    | T.ESeq(_, _) -> error "ESeq"
+    | T.ECall(_, _) -> failwith "ECall"
+    | T.ESeq(_, _) -> failwith "ESeq"
   in
   let rec munch_args args i =
     match args with
@@ -133,7 +120,6 @@ let codegen_one (stmt : Tree.stmt) : A.instr list =
           munch_stmt (T.SMove(T.EMem(T.EBinop(T.ETemp F.rsp, T.ADD, T.EConst (F.word_size * j))), a));
           munch_args args (i + 1)
   and munch_stmt (s : Tree.stmt) : unit = 
-    let internal_error = internal_error "munch_stmt" in
     match s with
     | T.SMove(T.ETemp t, T.ECall(T.ELabel l, args)) ->
         emits [
@@ -174,10 +160,7 @@ let codegen_one (stmt : Tree.stmt) : A.instr list =
             dst = []; src = [t2; t1]; jump = None
           }
         )
-    | T.SMove(_, _) -> error ""
-    (* [T.SExpr(T.EConst 0)], which represents a no-op, should have been eliminated by the [Canon] module.
-       Only the [T.SExpr(T.ECall(...))] form is allowed here.
-     *)
+    | T.SMove(_, _) -> failwith ""
     | T.SExpr(T.ECall(T.ELabel l, args)) ->
         emit (
           A.IOper {
@@ -186,14 +169,7 @@ let codegen_one (stmt : Tree.stmt) : A.instr list =
           }
         )
     | T.SExpr (T.ETemp _) -> ()
-    | T.SExpr _ -> error "SExpr"
-        (* let t = Temp.new_temp () in *)
-        (* emit ( *)
-        (*   A.IOper { *)
-        (*     assem = Printf.sprintf "movq `s0, `d0\n"; *)
-        (*     dst = [t]; src = [munch_expr e]; jump = None *)
-        (*   } *)
-        (* ) *)
+    | T.SExpr _ -> failwith "SExpr"
     | T.SJump(T.ELabel l, [l']) when l = l' -> 
         emit (
           A.IOper {
@@ -201,7 +177,7 @@ let codegen_one (stmt : Tree.stmt) : A.instr list =
             dst = []; src = []; jump = Some([l])
           }
         )
-    | T.SJump(_, _) -> error "SJump"
+    | T.SJump(_, _) -> failwith "SJump"
     | T.SCJump(e1, op, e2, t, f) ->
         let t1 = munch_expr e1 in
         let t2 = munch_expr e2 in
@@ -223,7 +199,7 @@ let codegen_one (stmt : Tree.stmt) : A.instr list =
             dst = []; src = []; jump = Some [t; f]
           }
         ]
-    | T.SSeq(_, _) -> error "SSeq"
+    | T.SSeq(_, _) -> failwith "SSeq"
     | T.SLabel l -> emit (
           A.ILabel {
             assem = Symbol.name l ^ ":\n";

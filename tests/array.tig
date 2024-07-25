@@ -1,0 +1,6 @@
+let
+    type intarray = array of int
+    var ar := intarray [10] of 98
+in
+    print(chr(ar[9])) // out: b
+end

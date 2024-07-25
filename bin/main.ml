@@ -3,15 +3,19 @@ open Backend
 open Utils
 
 let usage_msg = ""
-let file = ref None
+let input_file = ref None
+let output_file = ref None
 let debug = ref false
 
-let anon_fun f = file := Some f
-let speclist = [ ("--debug", Arg.Set debug, "Show all intermediate languages") ]
+let anon_fun f = input_file := Some f
+let speclist =
+  [ ("--debug", Arg.Set debug, "Show all intermediate languages");
+    ("-o", Arg.String (fun s -> output_file := Some s), "Save the output to a file")
+  ]
 
 let _ = Arg.parse speclist anon_fun usage_msg
 let file = 
-  match !file with
+  match !input_file with
   | Some f -> f
   | None -> 
       Printf.eprintf "error: the file was not provided\n";
@@ -69,4 +73,10 @@ let data = ".section .data\n" ^ String.concat "" strings
 let text = ".section .text\n" ^ String.concat "" functions
 let final_program = header ^ data ^ text
 
-let _ = print_string final_program
+let _ = 
+  match !output_file with
+  | None -> print_string final_program
+  | Some f ->
+      let ch = open_out f in
+      Printf.fprintf ch "%s" final_program;
+      close_out ch

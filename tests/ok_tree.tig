@@ -1,7 +1,0 @@
-let
-    type tree = {item: int, children: treelist}
-    type treelist = {head: tree, tail: treelist}
-    var t := tree {item = 0, children = nil}
-in
-    t
-end

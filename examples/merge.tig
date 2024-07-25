@@ -1,0 +1,60 @@
+let
+    type any = { any : int }
+    var buffer := getChar()
+
+    function printInt(n : int) = 
+        let
+            function aux(n : int) = 
+                if n > 0 then (
+                    aux(n / 10);
+                    print(chr(n - n / 10 * 10 + ord("0")))
+                )
+        in
+            if n > 0 then aux(n)
+            else if n < 0 then (print("-"); aux(0 - n))
+            else print("0")
+        end
+
+    function readInt(any : any) : int = 
+        let
+            var n := 0
+            function isDigit(s : string) : int = 
+                ord("0") <= ord(s) & ord(s) <= ord("9")
+        in (
+            while buffer = " " | buffer = "\n" do buffer := getChar();
+            any.any := isDigit(buffer);
+            while isDigit(buffer) do (n := 10 * n + ord(buffer) - ord("0"); buffer := getChar());
+            n
+        )
+        end
+
+    type list = { head : int, tail : list }
+
+    function readList() : list =
+        let
+            var any := any { any = 0 }
+            var n := readInt(any)
+        in 
+            if any.any then
+                list { head = n, tail = readList() }
+            else
+                (buffer := getChar(); nil)
+        end
+
+    function merge(a : list, b : list) : list = 
+        if a = nil then b
+        else if b = nil then a
+        else if a.head < b.head then list { head = a.head, tail = merge(a.tail, b) }
+        else                         list { head = b.head, tail = merge(a, b.tail) }
+
+    function printList(l : list) = 
+        if l = nil then
+            print("\n")
+        else (
+            printInt(l.head); print(" "); printList(l.tail)
+        )
+
+    var x := any { any = 0 }
+in (
+    printList(merge(readList(), readList()))
+) end
