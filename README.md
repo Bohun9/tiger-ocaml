@@ -1,5 +1,5 @@
 ### Tiger
-A compiler for the Tiger language targetting the x86-64 architecture.
+A compiler for the Tiger language targeting the x86-64 architecture.
 
 ### Features
 - nested functions
