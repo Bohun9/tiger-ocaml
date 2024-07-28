@@ -34,7 +34,7 @@ L52:
 L3:
     push %rbp
     movq %rsp, %rbp
-    subq $32, %rsp
+    subq $16, %rsp
     movq %r15, -16(%rbp)
     movq %rdi, -8(%rbp)
     movq %rsi, %r15
@@ -70,13 +70,13 @@ L5:
     call print
     jmp L7
 L63:
-    addq $32, %rsp
+    addq $16, %rsp
     pop %rbp
     ret
 L1:
     push %rbp
     movq %rsp, %rbp
-    subq $32, %rsp
+    subq $16, %rsp
     movq %r15, -16(%rbp)
     movq %rdi, -8(%rbp)
     movq %rsi, %r15
@@ -108,7 +108,7 @@ L10:
     call L3
     jmp L12
 L62:
-    addq $32, %rsp
+    addq $16, %rsp
     pop %rbp
     ret
 L16:
@@ -154,7 +154,7 @@ L61:
 L2:
     push %rbp
     movq %rsp, %rbp
-    subq $48, %rsp
+    subq $32, %rsp
     movq %r13, -32(%rbp)
     movq %r14, -24(%rbp)
     movq %r15, -16(%rbp)
@@ -228,13 +228,13 @@ L34:
     movq %rax, (%r13)
     jmp L32
 L60:
-    addq $48, %rsp
+    addq $32, %rsp
     pop %rbp
     ret
 L36:
     push %rbp
     movq %rsp, %rbp
-    subq $48, %rsp
+    subq $32, %rsp
     movq %r14, -24(%rbp)
     movq %r15, -16(%rbp)
     movq %rdi, -8(%rbp)
@@ -273,13 +273,13 @@ L39:
     movq %r15, %rax
     jmp L41
 L59:
-    addq $48, %rsp
+    addq $32, %rsp
     pop %rbp
     ret
 L37:
     push %rbp
     movq %rsp, %rbp
-    subq $64, %rsp
+    subq $48, %rsp
     movq %r12, -40(%rbp)
     movq %r13, -32(%rbp)
     movq %r14, -24(%rbp)
@@ -346,13 +346,13 @@ L42:
     movq %rax, (%r15)
     jmp L44
 L58:
-    addq $64, %rsp
+    addq $48, %rsp
     pop %rbp
     ret
 L38:
     push %rbp
     movq %rsp, %rbp
-    subq $32, %rsp
+    subq $16, %rsp
     movq %r15, -16(%rbp)
     movq %rdi, -8(%rbp)
     movq %rsi, %r15
@@ -378,13 +378,13 @@ L53:
     call print
     jmp L55
 L57:
-    addq $32, %rsp
+    addq $16, %rsp
     pop %rbp
     ret
 tigermain:
     push %rbp
     movq %rsp, %rbp
-    subq $64, %rsp
+    subq $32, %rsp
     movq %r13, -32(%rbp)
     movq %r14, -24(%rbp)
     movq %r15, -16(%rbp)
@@ -413,6 +413,6 @@ tigermain:
     movq -16(%rbp), %r15
     jmp L56
 L56:
-    addq $64, %rsp
+    addq $32, %rsp
     pop %rbp
     ret
