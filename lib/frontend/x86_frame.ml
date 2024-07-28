@@ -198,7 +198,7 @@ let proc_entry_exit2 (code : Assem.instr list) : Assem.instr list =
 
 (* [proc_entry_exit3] handles stack pointers registers.  *)
 let proc_entry_exit3 (frame : frame) (code : Assem.instr list) : Assem.instr list = 
-  let frame_size = word_size * (!(frame.locals_num) + (max 0 !(frame.max_args_call))) in
+  let frame_size = word_size * (!(frame.locals_num) + (max 0 (!(frame.max_args_call) - 6))) in
   let frame_size = frame_size + (16 - (frame_size mod 16)) mod 16 in
   let (label :: code) = code in
   let prologue =
